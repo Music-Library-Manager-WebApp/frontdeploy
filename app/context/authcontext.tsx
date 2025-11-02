@@ -1,38 +1,53 @@
 'use client'
-import { createContext, useContext, useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { getCurrentUser, User } from "../../lib/api";
 
-const AuthContext = createContext()
-
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const router = useRouter()
-
-  useEffect(() => {
-    // check from localStorage or cookie
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
-    }
-  }, [])
-
-  const login = (userData) => {
-    setUser(userData)
-    localStorage.setItem('user', JSON.stringify(userData))
-    router.push('/home')
-  }
-
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem('user')
-    router.push('/login')
-  }
-
-  return (
-    <AuthContext.Provider value={{ user, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  )
+interface AuthContextProps {
+  user: User | null;
+  token: string | null;
+  loginUser: (token: string) => void;
+  logout: () => void;
 }
 
-export const useAuth = () => useContext(AuthContext)
+const AuthContext = createContext<AuthContextProps>({
+  user: null,
+  token: null,
+  loginUser: () => {},
+  logout: () => {},
+});
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [token, setToken] = useState<string | null>(typeof window !== "undefined" ? localStorage.getItem("token") : null);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (token) {
+      getCurrentUser(token)
+        .then(setUser)
+        .catch(() => {
+          localStorage.removeItem("token");
+          setToken(null);
+          setUser(null);
+        });
+    }
+  }, [token]);
+
+  const loginUser = (newToken: string) => {
+    localStorage.setItem("token", newToken);
+    setToken(newToken);
+  };
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    setToken(null);
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, token, loginUser, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => useContext(AuthContext);

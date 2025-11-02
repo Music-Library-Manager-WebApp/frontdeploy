@@ -6,7 +6,7 @@ const HeaderComponents = {
   image: "/file.svg"
 }
 
-export default function () {
+export default function Header() {
   return (
 
     <div className=" flex relative bg-amber-500 items-center justify-between">

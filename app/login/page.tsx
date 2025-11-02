@@ -1,89 +1,61 @@
 'use client'
-import { useState } from 'react'
-import { useAuth } from '../context/authcontext'  // make sure the path matches your context file
-import Link from 'next/link'
+import React, { useState, ChangeEvent, FormEvent } from "react";
+import { login, Token } from "../../lib/api";
+import { useAuth } from "../context/authcontext";
+import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
-  const { login } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+export default function Login() {
+  const { loginUser } = useAuth();
+  const router = useRouter();
 
-  const handleLogin = async (e) => {
-    e.preventDefault()
-    setError('')
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
     try {
-      // Replace this with your actual FastAPI backend call
-      // Example:
-      // const res = await fetch('http://127.0.0.1:8000/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email, password })
-      // })
-      // const data = await res.json()
-      // if (res.ok) login(data)
-
-      // Temporary simulation for now
-      if (email === '' || password === '') {
-        setError('Email and password are required')
-        return
-      }
-      login({ email })  // store minimal user info
-    } catch (err) {
-      console.error(err)
-      setError('Login failed. Please try again.')
+      const data: Token = await login(username, password);
+      loginUser(data.access_token);
+      router.push("/"); // redirect to Home
+    } catch {
+      setError("Invalid username or password");
     }
-  }
+  };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-amber-50">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white shadow-md p-6 rounded-xl w-96"
-      >
-        <h1 className="text-2xl font-bold mb-4 text-center text-amber-700">
-          Sign In
-        </h1>
-
-        {error && (
-          <p className="text-red-500 text-sm mb-3 text-center">{error}</p>
-        )}
-
-        <input
-          type="email"
-          placeholder="Email"
-          className="border p-2 w-full mb-3 rounded-md"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-
-        <input
-          type="password"
-          placeholder="Password"
-          className="border p-2 w-full mb-3 rounded-md"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-
-        <button
-          type="submit"
-          className="w-full bg-amber-600 text-white py-2 rounded-lg hover:bg-amber-700"
-        >
-          Login
-        </button>
-
-        <div className="text-center mt-4">
-          <p>
-            Don't have an account?{' '}
-            <Link href="/signup" className="text-amber-600 hover:underline">
-              Sign Up
-            </Link>
-          </p>
-        </div>
-      </form>
+    <div className="min-h-screen flex items-center justify-center bg-[#FFF7F0] px-4">
+      <div className="w-full max-w-md bg-white shadow-lg rounded-xl p-8 border-t-8 border-[#6F4E37]">
+        <h2 className="text-2xl font-bold text-[#6F4E37] mb-6 text-center">Login</h2>
+        {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+            className="border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#6F4E37]"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            className="border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#6F4E37]"
+            required
+          />
+          <button
+            type="submit"
+            className="bg-[#6F4E37] text-white py-2 rounded-md hover:bg-[#563A2E] transition font-semibold"
+          >
+            Login
+          </button>
+        </form>
+        <p className="mt-4 text-center text-gray-600">
+          Don't have an account? <a href="/signup" className="text-[#6F4E37] font-semibold hover:underline">Sign up</a>
+        </p>
+      </div>
     </div>
-  )
+  );
 }
