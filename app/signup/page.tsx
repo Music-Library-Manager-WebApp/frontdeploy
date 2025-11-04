@@ -1,27 +1,25 @@
 'use client'
-import React, { useState, ChangeEvent, FormEvent } from "react";
-import { signup, SignupData, User } from "../../lib/api";
-import { useRouter } from "next/navigation";
+import { useState, ChangeEvent, FormEvent } from "react"
+import { useRouter } from "next/navigation"
+import axios from "axios"
 
 export default function Signup() {
-  const router = useRouter();
-  const [form, setForm] = useState<SignupData>({ username: "", email: "", password: "", full_name: "" });
-  const [message, setMessage] = useState("");
+  const router = useRouter()
+  const [form, setForm] = useState({ username: "", email: "", password: "", full_name: "" })
+  const [message, setMessage] = useState("")
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => setForm({ ...form, [e.target.name]: e.target.value })
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     try {
-      const user: User = await signup(form);
-      setMessage(`User ${user.username} registered successfully! Redirecting to login...`);
-      setTimeout(() => router.push("/login"), 1500);
+      await axios.post('http://localhost:8000/signup', new URLSearchParams(form), { withCredentials: true })
+      setMessage("User registered successfully! Redirecting to login...")
+      setTimeout(() => router.push("/login"), 1500)
     } catch (err: any) {
-      setMessage(err.message);
+      setMessage(err.response?.data?.detail || err.message)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FFF7F0] px-4">
@@ -40,5 +38,5 @@ export default function Signup() {
         </p>
       </div>
     </div>
-  );
+  )
 }

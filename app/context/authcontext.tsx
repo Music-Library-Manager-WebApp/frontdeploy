@@ -1,53 +1,63 @@
 'use client'
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { getCurrentUser, User } from "../../lib/api";
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
+import axios from 'axios'
 
-interface AuthContextProps {
-  user: User | null;
-  token: string | null;
-  loginUser: (token: string) => void;
-  logout: () => void;
+interface AuthContextType {
+  user: any
+  loginUser: (username: string, password: string) => Promise<void>
+  logout: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextProps>({
-  user: null,
-  token: null,
-  loginUser: () => {},
-  logout: () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(typeof window !== "undefined" ? localStorage.getItem("token") : null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null)
+
+  // fetch currently logged in user
+  const fetchMe = async () => {
+    const res = await axios.get("http://localhost:8000/users/me/", {
+      withCredentials: true, // important for cookie auth
+    })
+    return res.data
+  }
 
   useEffect(() => {
-    if (token) {
-      getCurrentUser(token)
-        .then(setUser)
-        .catch(() => {
-          localStorage.removeItem("token");
-          setToken(null);
-          setUser(null);
-        });
+    const loadUser = async () => {
+      try {
+        const me = await fetchMe()
+        setUser(me)
+      } catch {
+        setUser(null) // not logged in
+      }
     }
-  }, [token]);
+    loadUser()
+  }, [])
 
-  const loginUser = (newToken: string) => {
-    localStorage.setItem("token", newToken);
-    setToken(newToken);
-  };
+  const loginUser = async (username: string, password: string) => {
+    await axios.post(
+      'http://localhost:8000/token',
+      new URLSearchParams({ username, password }),
+      { withCredentials: true, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    )
+    // use fetchMe instead of getCurrentUser
+    const me = await fetchMe()
+    setUser(me)
+  }
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    setToken(null);
-    setUser(null);
-  };
+  const logout = async () => {
+    await axios.post('http://localhost:8000/logout', {}, { withCredentials: true }) // backend should clear cookie
+    setUser(null)
+  }
 
   return (
-    <AuthContext.Provider value={{ user, token, loginUser, logout }}>
+    <AuthContext.Provider value={{ user, loginUser, logout }}>
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) throw new Error('useAuth must be used within AuthProvider')
+  return context
+}
